@@ -1,0 +1,106 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define ALPHABET_SIZE 26
+#define MAX_TEXT_SIZE 1000
+#define MAX_PLAINTEXTS 100
+
+// English letter frequency (relative frequency in percentage)
+double english_freq[ALPHABET_SIZE] = {
+    8.167, 1.492, 2.782, 4.253, 12.702, 2.228, 2.015, 6.094, 6.966,
+    0.153, 0.772, 4.025, 2.406, 6.749, 7.507, 1.929, 0.095, 5.987,
+    6.327, 9.056, 2.758, 0.978, 2.361, 0.150, 1.974, 0.074
+};
+
+// Function to calculate letter frequency in the ciphertext
+void calculate_frequency(const char *text, double *freq) {
+    int count[ALPHABET_SIZE] = {0};
+    int total_letters = 0;
+
+    // Count each letter in the text
+    for (int i = 0; text[i] != '\0'; i++) {
+        if (isalpha(text[i])) {
+            count[toupper(text[i]) - 'A']++;
+            total_letters++;
+        }
+    }
+
+    // Calculate frequency in percentage
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        freq[i] = ((double)count[i] / total_letters) * 100.0;
+    }
+}
+
+// Function to find the closest English letter frequency match
+char find_closest_letter(double freq) {
+    char closest_letter = 'A';
+    double min_diff = 100.0;  // Max possible difference in percentage is 100
+
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        double diff = (freq - english_freq[i]);
+        if (diff < min_diff) {
+            min_diff = diff;
+            closest_letter = 'A' + i;
+        }
+    }
+    return closest_letter;
+}
+
+// Function to decrypt the text using the given mapping
+void decrypt_text(const char *text, const char *mapping, char *output) {
+    for (int i = 0; text[i] != '\0'; i++) {
+        if (isalpha(text[i])) {
+            int index = toupper(text[i]) - 'A';
+            output[i] = isupper(text[i]) ? mapping[index] : tolower(mapping[index]);
+        } else {
+            output[i] = text[i];
+        }
+    }
+    output[strlen(text)] = '\0';
+}
+
+int main() {
+    char text[MAX_TEXT_SIZE];
+    double freq[ALPHABET_SIZE];
+    char mappings[MAX_PLAINTEXTS][ALPHABET_SIZE + 1];
+    char decrypted_texts[MAX_PLAINTEXTS][MAX_TEXT_SIZE];
+    int num_plaintexts;
+
+    // Read ciphertext
+    printf("Enter the ciphertext: ");
+    fgets(text, MAX_TEXT_SIZE, stdin);
+    text[strcspn(text, "\n")] = '\0';  // Remove newline character
+
+    // Calculate letter frequency in the ciphertext
+    calculate_frequency(text, freq);
+
+    // Find mappings based on closest English letter frequencies
+    for (int i = 0; i < MAX_PLAINTEXTS; i++) {
+        for (int j = 0; j < ALPHABET_SIZE; j++) {
+            mappings[i][j] = find_closest_letter(freq[(j + i) % ALPHABET_SIZE]);
+        }
+        mappings[i][ALPHABET_SIZE] = '\0';
+    }
+
+    // Decrypt text using the mappings
+    for (int i = 0; i < MAX_PLAINTEXTS; i++) {
+        decrypt_text(text, mappings[i], decrypted_texts[i]);
+    }
+
+    // Get the number of top possible plaintexts to display
+    printf("Enter the number of top possible plaintexts to display: ");
+    scanf("%d", &num_plaintexts);
+    if (num_plaintexts > MAX_PLAINTEXTS) {
+        num_plaintexts = MAX_PLAINTEXTS;
+    }
+
+    // Display the top possible plaintexts
+    printf("\nTop %d possible plaintexts:\n", num_plaintexts);
+    for (int i = 0; i < num_plaintexts; i++) {
+        printf("Plaintext %d: %s\n", i + 1, decrypted_texts[i]);
+    }
+
+    return 0;
+}
